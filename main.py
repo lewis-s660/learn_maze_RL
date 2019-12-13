@@ -15,19 +15,21 @@ environment = Maze()
 
 #agent = AgentUser()
 #agent = AgentRandom()
+#agent = AgentMonteCarlo(epsilon=0.001)
 agent = AgentMonteCarlo()
 
 control = Control(environment, [agent], is_display=False)
 
 count = list()
 
-for i in range(30):
+for i in range(100000):
     experience = control.play(1)
     count.append(environment.count)
-    print('終了回数：{0}'.format(environment.count))
+    print('プレイ回数：{0} 攻略手数：{1}'.format(i, environment.count))
 
     agent.fit(experience, number=i)
 
 print(count)
+print(min(count))
 
 
