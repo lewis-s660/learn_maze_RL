@@ -1,7 +1,6 @@
 import sys
 
 import numpy as np
-import pandas as pd
 import tensorflow.compat.v1 as tf
 
 from agent_base import AgentBase
@@ -40,8 +39,16 @@ class AgentMonteCarlo(AgentBase):
 
         return action
 
-    def adjust_experience(self, experience, score):
-        experience['reward'][-1] = 100
+    def get_reward(self, status, action, status_next, is_play, score, actions_effective_next=None):
+        reward = 0
+        if len(actions_effective_next) <= 1:
+            # 行き止まりの場合
+            reward = -10
+        if not is_play:
+            # ゴールした場合
+            reward = 100
+
+        return reward
 
     def fit(self, experience, epochs=100, size_batch=20, number=1):
         if self.__mode_table:

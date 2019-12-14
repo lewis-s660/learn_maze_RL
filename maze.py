@@ -117,6 +117,31 @@ class Maze:
 
         return is_action
 
+    def get_actions_effective(self):
+        """
+        有効な行動リストを取得
+        :return: 有効な行動リスト
+        """
+        actions = list()
+
+        if self.__wall_horizontal[self.__position[0], self.__position[1]] == 0:
+            # 上方向に移動できる場合
+            actions.append(0)
+
+        if self.__wall_vertical[self.__position[1], self.__position[0] + 1] == 0:
+            # 右方向に移動できる場合
+            actions.append(1)
+
+        if self.__wall_horizontal[self.__position[0], self.__position[1] + 1] == 0:
+            # 下方向に移動できる場合
+            actions.append(2)
+
+        if self.__wall_vertical[self.__position[1], self.__position[0]] == 0:
+            # 左方向に移動できる場合
+            actions.append(3)
+
+        return actions
+
     def display(self):
         """
         表示出力

@@ -17,7 +17,7 @@ class Control:
 
         return self.__time_elapsed
 
-    def play(self, count=1):
+    def play(self, count=1, is_indicate=True):
         """
         プレイを実施
         :return: 結果
@@ -29,7 +29,8 @@ class Control:
             experience.append(list())
 
         for i in range(count):
-            print('start play:{0}回目'.format(i + 1))
+            if is_indicate:
+                print('start play:{0}回目'.format(i + 1))
             # 各種データの初期化
             self.__time_start = datetime.now()
             self.__environment.start()
@@ -61,7 +62,8 @@ class Control:
                                                               action,
                                                               self.__environment.status,
                                                               self.__environment.is_play,
-                                                              self.__environment.score)
+                                                              self.__environment.score,
+                                                              self.__environment.get_actions_effective())
 
                         experience[j][-1]['status'].append(status)
                         experience[j][-1]['action'].append(action)

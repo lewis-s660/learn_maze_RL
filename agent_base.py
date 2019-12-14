@@ -14,12 +14,12 @@ class AgentBase:
     def get_action(self, status):
         return np.zeros([2], dtype=np.int)
 
-    def get_reward(self, status, action, status_next, is_play, score):
+    def get_reward(self, status, action, status_next, is_play, score, actions_effective_next=None):
         return 0
 
     def adjust_experience(self, experience, score):
         pass
 
-    def fit(self, experience, epochs=100, size_batch=20):
+    def fit(self, experience, epochs=100, size_batch=20, number=1):
         pass
 
