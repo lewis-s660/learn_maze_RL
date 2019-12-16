@@ -25,9 +25,12 @@ class AgentMonteCarlo(AgentBase):
             self.__model = tf.keras.models.Sequential([tf.keras.layers.Dense(128, input_shape=(3, ), activation='relu'),
                                                        tf.keras.layers.Dense(128, activation='relu'),
                                                        tf.keras.layers.Dense(1)])
-            self.__model.compile(optimizer='adam', loss='mse', metrics=['accuracy'])
-
+            self.__model.compile(optimizer='adam', loss='mse', metrics=['mse'])
             self.__model.summary()
+            try:
+                self.__model.load_weights('data\\monte_carlo\\weights.hdf5')
+            except:
+                pass
 
     def get_action(self, status):
         value = np.random.randn()
@@ -96,6 +99,7 @@ class AgentMonteCarlo(AgentBase):
         else:
             # ニューラルネットワークモードの場合
             self.__model.fit(np.array(train_data), np.array(train_label), epochs=epochs)
+            self.__model.save_weights('data\\monte_carlo\\weights.hdf5')
 
     def __get_q(self, status, action):
         q = 0
