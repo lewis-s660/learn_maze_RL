@@ -47,10 +47,13 @@ class Control:
                 # 初期状態を表示
                 self.__environment.display()
 
+            counter = 0
+
             # プレイを最後まで実施
             while True:
                 for j in range(len(self.__players)):
                     while True:
+                        counter += 1
                         # 行動前の状態を取得
                         status = self.__environment.status
                         # 行動を取得
@@ -69,6 +72,9 @@ class Control:
                         experience[j][-1]['action'].append(action)
                         experience[j][-1]['status_next'].append(self.__environment.status)
                         experience[j][-1]['reward'].append(reward)
+
+                        if is_indicate and (counter % 100 == 0):
+                            print('　　　play count:{0}回目'.format(counter))
 
                         if can_action:
                             # 行動が実行できた場合
