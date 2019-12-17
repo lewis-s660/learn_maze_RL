@@ -142,9 +142,10 @@ class Maze:
 
         return actions
 
-    def display(self):
+    def display(self, q_data=None):
         """
         表示出力
+        :param q_data: 行動価値Qテーブル
         :return: なし
         """
 
@@ -152,25 +153,60 @@ class Maze:
 
         for i in range(self.__wall_horizontal.shape[1]):
             for j in range(self.__wall_horizontal.shape[0]):
-                output += ' '
-                output += ' ' if self.__wall_horizontal[j, i] == 0 else '-'
+                if q_data is None:
+                    output += ' '
+                    output += ' ' if self.__wall_horizontal[j, i] == 0 else '-'
+                else:
+                    output += (',' if self.__wall_horizontal[j, i] == 0 else '-,') * 4
             output += '\n\r'
 
             if i < self.__wall_vertical.shape[0]:
-                for j in range(self.__wall_vertical.shape[1]):
-                    output += ' ' if self.__wall_vertical[i, j] == 0 else '|'
-                    if (self.__position[0] == j) and (self.__position[1] == i):
-                        # プレイヤーが存在する位置の場合
-                        output += '○'
-                    elif (i == 0) and (j == 0):
-                        # スタート地点の場合
-                        output += 'S'
-                    elif (i == self.__wall_horizontal.shape[0] - 1) and (j == self.__wall_vertical.shape[0] - 1):
-                        # ゴール地点の場合
-                        output += 'G'
-                    else:
-                        # 上記以外の地点の場合
-                        output += ' '
-                output += '\n\r'
+                if q_data is None:
+                    for j in range(self.__wall_vertical.shape[1]):
+                        output += ' ' if self.__wall_vertical[i, j] == 0 else '|'
+                        if (self.__position[0] == j) and (self.__position[1] == i):
+                            # プレイヤーが存在する位置の場合
+                            output += '○'
+                        elif (i == 0) and (j == 0):
+                            # スタート地点の場合
+                            output += 'S'
+                        elif (i == self.__wall_horizontal.shape[0] - 1) and (j == self.__wall_vertical.shape[0] - 1):
+                            # ゴール地点の場合
+                            output += 'G'
+                        else:
+                            # 上記以外の地点の場合
+                            output += ' '
+                    output += '\n\r'
+                else:
+                    # 上方向の行動価値Qの値を出力するループ
+                    for j in range(q_data.shape[1]):
+                        output += '{0},,{1:.2f},,'.format(' ' if self.__wall_vertical[i, j] == 0 else '|', q_data[i, j, 0])
+                    output += '{0}\r\n'.format(' ' if self.__wall_vertical[i, q_data.shape[1]] == 0 else '|')
+
+                    # 左右方向の行動価値Qの値を出力するループ
+                    for j in range(q_data.shape[1]):
+                        point = ' '
+                        if (self.__position[0] == j) and (self.__position[1] == i):
+                            # プレイヤーが存在する位置の場合
+                            point = '○'
+                        elif (i == 0) and (j == 0):
+                            # スタート地点の場合
+                            point = 'S'
+                        elif (i == self.__wall_horizontal.shape[0] - 1) and (j == self.__wall_vertical.shape[0] - 1):
+                            # ゴール地点の場合
+                            point = 'G'
+                        else:
+                            # 上記以外の地点の場合
+                            point = ' '
+                        output += '{0},{1:.2f},{2},{3:.2f},'.format(' ' if self.__wall_vertical[i, j] == 0 else '|',
+                                                                    q_data[i, j, 3],
+                                                                    point,
+                                                                    q_data[i, j, 2])
+                    output += '{0}\r\n'.format(' ' if self.__wall_vertical[i, q_data.shape[1]] == 0 else '|')
+
+                    # 下方向の行動価値Qの値を出力するループ
+                    for j in range(q_data.shape[1]):
+                        output += '{0},,{1:.2f},,'.format(' ' if self.__wall_vertical[i, j] == 0 else '|', q_data[i, j, 2])
+                    output += '{0}\r\n'.format(' ' if self.__wall_vertical[i, q_data.shape[1]] == 0 else '|')
 
         print(output)

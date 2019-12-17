@@ -7,22 +7,24 @@ from agent_base import AgentBase
 
 
 class AgentMonteCarlo(AgentBase):
-    def __init__(self, epsilon=0.1, decay=0.9, mode_table=True, size=(9, 9)):
+    def __init__(self, epsilon=0.1, decay=0.9, mode_table=True, size=(8, 8)):
         super().__init__()
         self.__epsilon = epsilon
         self.__decay = decay
         self.__mode_table = mode_table
+        self.__size = size
         if self.__mode_table:
             # テーブルモードの場合
             try:
                 self.__q_data = np.load('data\\monte_carlo\\q_data.npy')
                 self.__q_count = np.load('data\\monte_carlo\\q_count.npy')
             except:
-                self.__q_data = np.zeros([size[0], size[1], 4])
+                self.__q_data = np.zeros([self.__size[0], self.__size[1], 4])
                 self.__q_count = np.ones(self.__q_data.shape)
         else:
             # ニューラルネットワークモードの場合
             self.__model = tf.keras.models.Sequential([tf.keras.layers.Dense(128, input_shape=(3, ), activation='relu'),
+                                                       tf.keras.layers.Dense(1024, activation='relu'),
                                                        tf.keras.layers.Dense(128, activation='relu'),
                                                        tf.keras.layers.Dense(1)])
             self.__model.compile(optimizer='adam', loss='mse', metrics=['mse'])
@@ -85,8 +87,16 @@ class AgentMonteCarlo(AgentBase):
                 q_delta_counter[status[0], status[1], action] += 1
             else:
                 # ニューラルネットワークモードの場合
-                train_data.append((status[0], status[1], action))
-                train_label.append(q)
+                j = 0
+                for j in range(len(train_data)):
+                    if train_data[j] == (status[0], status[1], action):
+                        # 登録済みのステータスと行動の組み合わせの場合
+                        break
+
+                if (j == 0) or (len(train_data) <= j):
+                    # 未登録のステータスと行動の組み合わせの場合
+                    train_data.append((status[0], status[1], action))
+                    train_label.append(q)
 
         if self.__mode_table:
             # テーブルモードの場合
@@ -109,9 +119,20 @@ class AgentMonteCarlo(AgentBase):
             q = self.__q_data[status[0], status[1], action]
         else:
             # ニューラルネットワークモードの場合
-            q = self.__model.predict(np.array([status[0], status[1], action])[np.newaxis, :])
+            q = self.__model.predict(np.array([status[0], status[1], action])[np.newaxis, :])[0][0]
 
         return q
 
+    def get_q_table(self):
+        q_data = np.zeros([self.__size[0], self.__size[1], 4])
+        if self.__mode_table:
+            # テーブルモードの場合
+            q_data = self.__q_data.copy()
+        else:
+            # ニューラルネットワークモードの場合
+            for i in range(q_data.shape[0]):
+                for j in range(q_data.shape[1]):
+                    for k in range(q_data.shape[2]):
+                        q_data[i, j, k] = self.__get_q((i, j), k)
 
-
+        return q_data
