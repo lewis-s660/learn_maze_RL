@@ -35,7 +35,7 @@ class AgentMonteCarlo(AgentBase):
                 pass
 
     def get_action(self, status):
-        value = np.random.randn()
+        value = np.random.rand()
 
         q_max = self.__get_q(status, 0)
         action = 0
@@ -53,11 +53,11 @@ class AgentMonteCarlo(AgentBase):
 
         return action
 
-    def get_reward(self, status, action, status_next, is_play, score, actions_effective_next=None):
+    def get_reward(self, status, action, can_action, status_next, is_play, score, actions_effective_next=None):
         reward = 0
-        if len(actions_effective_next) <= 1:
-            # 行き止まりの場合
-            reward = -10
+        #if (len(actions_effective_next) <= 1) or not can_action:
+            # 行き止まりまたは壁方向を選択した場合
+        #    reward = -10
         if not is_play:
             # ゴールした場合
             reward = 100
@@ -83,13 +83,13 @@ class AgentMonteCarlo(AgentBase):
             q = experience['reward'][-1 * i] + self.__decay * q
             if self.__mode_table:
                 # テーブルモードの場合
-                q_total[status[0], status[1], action] += q
-                q_delta_counter[status[0], status[1], action] += 1
+                q_total[status[1], status[0], action] += q
+                q_delta_counter[status[1], status[0], action] += 1
             else:
                 # ニューラルネットワークモードの場合
                 j = 0
                 for j in range(len(train_data)):
-                    if train_data[j] == (status[0], status[1], action):
+                    if train_data[j] == (status[1], status[0], action):
                         # 登録済みのステータスと行動の組み合わせの場合
                         break
 
@@ -116,7 +116,7 @@ class AgentMonteCarlo(AgentBase):
 
         if self.__mode_table:
             # テーブルモードの場合
-            q = self.__q_data[status[0], status[1], action]
+            q = self.__q_data[status[1], status[0], action]
         else:
             # ニューラルネットワークモードの場合
             q = self.__model.predict(np.array([status[0], status[1], action])[np.newaxis, :])[0][0]

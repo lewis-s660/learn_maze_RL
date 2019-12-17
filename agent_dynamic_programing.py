@@ -13,7 +13,7 @@ class AgentDynamicPrograming(AgentBase):
         self.__epsilon = epsilon
         self.__decay = decay
         self.__mode_table = mode_table
-        self.__size = size
+        self.__size = np.array(size)
         if self.__mode_table:
             # テーブルモードの場合
             try:
@@ -36,7 +36,7 @@ class AgentDynamicPrograming(AgentBase):
                 pass
 
     def get_action(self, status):
-        value = np.random.randn()
+        value = np.random.rand()
 
         q_max = self.__get_q(status, 0)
         action = 0
@@ -54,7 +54,7 @@ class AgentDynamicPrograming(AgentBase):
 
         return action
 
-    def get_reward(self, status, action, status_next, is_play, score, actions_effective_next=None):
+    def get_reward(self, status, action, can_action, status_next, is_play, score, actions_effective_next=None):
         reward = 0
         if len(actions_effective_next) <= 1:
             # 行き止まりの場合
@@ -67,7 +67,7 @@ class AgentDynamicPrograming(AgentBase):
 
     def fit(self, experience, epochs=100, size_batch=20, number=1):
         # とりうる位置を1次元配列で取得
-        indices = np.random.choice(range(self.__size[0] * self.__size[1]), replace=False)
+        indices = np.random.choice(range(self.__size[0] * self.__size[1]), self.__size[0] * self.__size[1], replace=False)
 
         # 学習を開始
         for i in range(epochs):
@@ -77,20 +77,41 @@ class AgentDynamicPrograming(AgentBase):
                 # 有効な行動リストを取得
                 actions = self.__environment.get_actions_effective(status)
                 # 行動を取得
-                action = self.get_action(status)
-                while action not in actions:
-                    # 有効リストに含まれている行動が取得できるまでループ
-                    action = self.get_action(status)
-                # 報酬を取得
-                reward = self.get_reward(None, None, None, False if status == np.array([self.__size[1], self.__size[0]]) else True, None, actions)
-                q = reward + self.__decay * self.__get_q(status, action)
-                if self.__mode_table:
-                    # テーブルモードの場合
-                    self.__q_data[status[0], status[1], action] = q
-                else:
-                    # ニューラルネットワークモードの場合
-                    #q = self.__model.predict(np.array([status[0], status[1], action])[np.newaxis, :])[0][0]
-                    pass
+                #action = self.get_action(status)
+                #while action not in actions:
+                #    # 有効リストに含まれている行動が取得できるまでループ
+                #    action = self.get_action(status)
+                for action in range(4):
+                    # 移動先の座標を算出
+                    status_next = status.copy()
+                    if action == 0:
+                        status_next[1] -= 1
+                    elif action == 1:
+                        status_next[0] += 1
+                    elif action == 2:
+                        status_next[1] += 1
+                    else:
+                        status_next[0] -= 1
+                    # 報酬を取得
+                    reward = self.get_reward(None, None, None, not (status_next == np.array([self.__size[1] - 1, self.__size[0] - 1])).all(), None, actions)
+
+                    # 行動価値Q(実際は価値V)の値を算出(移動先の行動価値Qの平均を価値とした)
+                    q = 0
+                    for k in range(4):
+                        try:
+                            q += self.__decay * self.__get_q(status_next, k)
+                        except:
+                            q += 0
+                    q /= 4
+                    q += reward
+
+                    if self.__mode_table:
+                        # テーブルモードの場合
+                        self.__q_data[status[0], status[1], action] = q
+                    else:
+                        # ニューラルネットワークモードの場合
+                        #q = self.__model.predict(np.array([status[0], status[1], action])[np.newaxis, :])[0][0]
+                        pass
 
         if self.__mode_table:
             # テーブルモードの場合

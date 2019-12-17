@@ -203,7 +203,7 @@ class Maze:
                         output += '{0},{1:.2f},{2},{3:.2f},'.format(' ' if self.__wall_vertical[i, j] == 0 else '|',
                                                                     q_data[i, j, 3],
                                                                     point,
-                                                                    q_data[i, j, 2])
+                                                                    q_data[i, j, 1])
                     output += '{0}\r\n'.format(' ' if self.__wall_vertical[i, q_data.shape[1]] == 0 else '|')
 
                     # 下方向の行動価値Qの値を出力するループ

@@ -63,6 +63,7 @@ class Control:
                         # 環境からの情報を通知
                         reward = self.__players[j].get_reward(status,
                                                               action,
+                                                              can_action,
                                                               self.__environment.status,
                                                               self.__environment.is_play,
                                                               self.__environment.score,

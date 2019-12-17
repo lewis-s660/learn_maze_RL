@@ -14,7 +14,7 @@ class AgentBase:
     def get_action(self, status):
         return np.zeros([2], dtype=np.int)
 
-    def get_reward(self, status, action, status_next, is_play, score, actions_effective_next=None):
+    def get_reward(self, status, action, can_action, status_next, is_play, score, actions_effective_next=None):
         return 0
 
     def adjust_experience(self, experience, score):

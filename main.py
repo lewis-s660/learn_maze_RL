@@ -15,9 +15,9 @@ mode = 'monte_carlo'
 # 経験必要フラグ
 necessary_experience = True
 # 最大ループ数
-count_loop_max = 10000
+count_loop_max = 1
 # エージェント切り替え境界値
-boundary_change_agent = 50
+boundary_change_agent = 0
 # ループでの表示間隔
 step_indicate = 100
 
@@ -25,6 +25,8 @@ step_indicate = 100
 environment = Maze()
 
 # モードに合わせたエージェントを生成
+agent_1 = None
+agent_2 = None
 if mode == 'User':
     # ユーザーモードの場合
     agent_1 = AgentUser()
@@ -33,13 +35,14 @@ elif mode == 'Random':
     agent_1 = AgentRandom()
 elif mode == 'monte_carlo':
     # モンテカルロ法モードの場合
-    #agent_1 = AgentMonteCarlo(epsilon=0.001)
-    agent_1 = AgentMonteCarlo(mode_table=True)
-    agent_2 = AgentMonteCarlo(mode_table=False)
+    agent_1 = AgentMonteCarlo(epsilon=0)
+    #agent_1 = AgentMonteCarlo(mode_table=True)
+    #agent_2 = AgentMonteCarlo(mode_table=False)
 elif mode == 'dynamic_programing':
     # 動的計画法モードの場合
     agent_1 = AgentDynamicPrograming(environment=environment, mode_table=True)
-    is_play = False
+    necessary_experience = False
+    count_loop_max = 1
 
 # 制御インスタンスを生成
 control_1 = Control(environment, [agent_1], is_display=False)
@@ -50,6 +53,7 @@ if agent_2 is not None:
 
 count_to_goal = list()
 for i in range(count_loop_max):
+    experience = None
     if necessary_experience:
         # 経験を取得する必要がある場合
         if (i <= boundary_change_agent) or control_2 is None:
@@ -64,7 +68,7 @@ for i in range(count_loop_max):
         # ゴールまでの手数を記憶
         count_to_goal.append(environment.count)
 
-        if (0 < i) and (i % step_indicate == 0):
+        if (0 < i) and ((i % step_indicate == 0) or (i == count_loop_max - 1)):
             # 表示のタイミングの場合
             print('プレイ回数：{0} 攻略手数：{1} 過去{2}回の平均：{3:.2f} 過去{2}回の最小攻略手数:{4}'.format(i, environment.count, step_indicate, mean(count_to_goal[-100:]), min(count_to_goal[-100:])))
 
@@ -77,7 +81,8 @@ for i in range(count_loop_max):
 
     # 学習を実施
     agent.fit(experience, number=i, epochs=10000)
-    # 学習後の行動価値Qの値を出力
-    environment.display(agent.get_q_table())
+
+# 学習後の行動価値Qの値を出力
+environment.display(agent.get_q_table())
 
 
