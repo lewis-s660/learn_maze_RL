@@ -129,6 +129,9 @@ class AgentMonteCarlo(AgentBase):
         """
         if experience is not None:
             # 学習データが存在する場合
+            # 1回のプレイの経験のみを使用する
+            # テーブルモードであれば複数プレイのデータを使用しても問題ないが,ニューラルネットワークモードの場合は
+            # 手数と減衰率から行動価値Qの値がプレイによって大きく異なることにより,学習が進まない可能性があるため.
             experience = experience[0][0]
             q = 0
             count = len(experience['status'])
