@@ -12,8 +12,9 @@ from agent_dynamic_programing import AgentDynamicPrograming
 # モードを指定
 mode = 'monte_carlo'
 
-# 経験必要フラグ
-necessary_experience = True
+
+# プレイ回数
+count_play = 1
 # 最大ループ数
 count_loop_max = 1
 # エージェント切り替え境界値
@@ -35,8 +36,9 @@ elif mode == 'Random':
     agent_1 = AgentRandom()
 elif mode == 'monte_carlo':
     # モンテカルロ法モードの場合
-    agent_1 = AgentMonteCarlo(epsilon=0)
+    #agent_1 = AgentMonteCarlo(epsilon=0)
     #agent_1 = AgentMonteCarlo(mode_table=True)
+    agent_1 = AgentMonteCarlo(mode_table=False, count_random_action=1)
     #agent_2 = AgentMonteCarlo(mode_table=False)
 elif mode == 'dynamic_programing':
     # 動的計画法モードの場合
@@ -52,10 +54,12 @@ if agent_2 is not None:
     control_2 = Control(environment, [agent_2], is_display=False)
 
 count_to_goal = list()
+
+# 指定プレイ回数のプレイと学習のセットを指定回数ループ
 for i in range(count_loop_max):
     experience = None
-    if necessary_experience:
-        # 経験を取得する必要がある場合
+    if 0 < count_play:
+        # プレスする場合
         if (i <= boundary_change_agent) or control_2 is None:
             # エージェント切り替え境界値以下または2つ目の制御インスタンスが存在しない場合
             control = control_1
@@ -64,7 +68,7 @@ for i in range(count_loop_max):
             control = control_2
 
         # 指定回数のプレイを実施
-        experience = control.play(1, is_indicate=True)
+        experience = control.play(count_play, is_indicate=True)
         # ゴールまでの手数を記憶
         count_to_goal.append(environment.count)
 
@@ -80,7 +84,9 @@ for i in range(count_loop_max):
         agent = agent_2
 
     # 学習を実施
-    agent.fit(experience, number=i, epochs=10000)
+    agent.fit(experience, number=i, epochs=1000000)
+    # 学習データを表示
+    #environment.display(agent.get_q_table_experience(experience))
 
 # 学習後の行動価値Qの値を出力
 environment.display(agent.get_q_table())

@@ -11,8 +11,13 @@ class Control:
 
     @property
     def time_elapsed(self):
+        """
+        経過時間
+        :return: 経過時間
+        """
         if self.environment.is_play:
             # プレイ中の場合
+            # 経過時間を更新
             self.__time_elapsed = datetime.now() - self.__time_start
 
         return self.__time_elapsed
@@ -20,7 +25,7 @@ class Control:
     def play(self, count=1, is_indicate=True):
         """
         プレイを実施
-        :return: 結果
+        :return: プレイを実施しての経験
         """
 
         # 経験(1階層：各プレイヤーのリスト、2階層：各プレイ情報のリスト、3階層：属性のディクショナリ、4階層：データの値)
