@@ -22,6 +22,7 @@ class AgentMonteCarlo(AgentBase):
         self.__mode_table = mode_table
         self.__size = size
         self.__count_random_policy = count_random_policy
+
         if self.__mode_table:
             # テーブルモードの場合
             try:
