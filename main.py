@@ -12,8 +12,9 @@ from agent_dynamic_programing import AgentDynamicPrograming
 # モードを指定
 mode = 'dynamic_programing'
 
+mode_table = True
 # プレイ回数
-count_play = 0
+count_play = 1
 # 最大ループ数
 count_loop_max = 1000
 # エージェント切り替え境界値
@@ -37,20 +38,31 @@ elif mode == 'Random':
     agent_1 = AgentRandom()
 elif mode == 'monte_carlo':
     # モンテカルロ法モードの場合
-    #agent_1 = AgentMonteCarlo(epsilon=0)
-    #agent_1 = AgentMonteCarlo(mode_table=True)
-    agent_1 = AgentMonteCarlo(mode_table=False, count_random_policy=1)
-    #agent_2 = AgentMonteCarlo(mode_table=False)
+    if mode_table:
+        # テーブルモードの場合
+        agent_1 = AgentMonteCarlo(mode_table=mode_table, decay=0.99, count_random_policy=count_loop_max)
+        # プレイ回数
+        count_play = 1
+        # 最大ループ数
+        count_loop_max = 1000
+    else:
+        # ニューラルネットワークモードの場合
+        agent_1 = AgentMonteCarlo(mode_table=mode_table, decay=0.99, count_random_policy=1)
+        #agent_2 = AgentMonteCarlo(mode_table=False)
 elif mode == 'dynamic_programing':
     # 動的計画法モードの場合
-    agent_1 = AgentDynamicPrograming(environment=environment, mode_table=True)
-    # プレイ回数を0に変更
-    count_play = 0
-    # 最大ループ数を1に変更(実際にプレイする必要がないため1回の学習(エポック数は1ではない)でよい)
-    count_loop_max = 1
-    # エポック数を変更
-    epochs = 1000
-
+    if mode_table:
+        # テーブルモードの場合
+        agent_1 = AgentDynamicPrograming(environment=environment, mode_table=mode_table)
+        # プレイ回数を0に変更
+        count_play = 0
+        # 最大ループ数を1に変更(実際にプレイする必要がないため1回の学習(エポック数は1ではない)でよい)
+        count_loop_max = 1
+        # エポック数を変更
+        epochs = 1000
+    else:
+        # ニューラルネットワークモードの場合
+        pass
 
 # 制御インスタンスを生成
 control_1 = Control(environment, [agent_1], is_display=False)

@@ -7,7 +7,7 @@ from agent_base import AgentBase
 
 
 class AgentMonteCarlo(AgentBase):
-    def __init__(self, epsilon=0.1, decay=0.99, mode_table=True, size=(8, 8), count_random_policy=0):
+    def __init__(self, epsilon=0.1, decay=0.9, mode_table=True, size=(8, 8), count_random_policy=0):
         """
         コンストラクタ
         :param epsilon: ε-Greedy方策で使用するεの値
@@ -104,15 +104,12 @@ class AgentMonteCarlo(AgentBase):
         """
         reward = 0
 
-        if (np.array(status) == np.array(status_next)).all():
-            # ステータスが変わっていない場合
-            reward = -10
-        if (len(actions_effective_next) <= 1) or not can_action:
-            # 行き止まりまたは壁方向を選択した場合
-            reward = -100
+        #if (len(actions_effective_next) <= 1) or not can_action:
+        #    # 行き止まりまたは壁方向を選択した場合
+        #    reward = -100
         if not is_play:
             # ゴールした場合
-            reward = 100000
+            reward = 10000
             # ランダム方策の実施回数をデクリメント
             self.__count_random_policy -= 1
 
