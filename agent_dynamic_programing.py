@@ -21,17 +21,16 @@ class AgentDynamicPrograming(AgentBase):
         self.__decay = decay
         self.__mode_table = mode_table
         self.__size = np.array(size)
+        self.__count_random_policy = 0
 
         if self.__mode_table:
             # テーブルモードの場合
             try:
                 # テーブルの情報をファイルから読み込み
-                self.__q_data = np.load('data\\dynamic_programing\\q_data.npy')
-                self.__q_count = np.load('data\\dynamic_programing\\q_count.npy')
+                self.__v_data = np.load('data\\dynamic_programing\\v_data.npy')
             except:
                 # ファイルからの読み込みに失敗した場合はすべて0で領域を確保
-                self.__q_data = np.zeros([self.__size[0], self.__size[1], 4])
-                self.__q_count = np.ones(self.__q_data.shape)
+                self.__v_data = np.zeros([self.__size[0], self.__size[1]])
         else:
             # ニューラルネットワークモードの場合
             try:
@@ -55,38 +54,6 @@ class AgentDynamicPrograming(AgentBase):
                 # 重みの読み込みに失敗した場合は何もしない
                 pass
 
-    def get_action(self, status):
-        """
-        行動取得処理
-        状態から行動を決定して返す
-        :param status: 状態
-        :return: 行動
-        """
-        if 0 < self.__count_random_policy:
-            # ランダム方策で行動選択をする場合
-            action = np.random.randint(0, 4)
-        else:
-            # ε-Greedy方策で行動を選択する場合
-            # εと比較するための値を取得
-            value = np.random.rand()
-
-            # 現在の状態における各行動での最大の行動価値Qを取得処理
-            q_max = self.__get_q(status, 0)
-            action = 0
-            for i in range(1, 4):
-                q = self.__get_q(status, i)
-                if q_max < q:
-                    # 今までの中で最大の行動価値Qを記憶
-                    q_max = q
-                    action = i
-
-            if value < self.__epsilon:
-                # ランダムで行動を決定する場合
-                # 行動価値Qが最大となる行動以外からランダムに行動を選択
-                action = (np.random.randint(action + 1, action + 4)) % 4
-
-        return action
-
     def get_reward(self, status, action, can_action, status_next, is_play, score, actions_effective_next=None):
         """
         報酬取得処理
@@ -102,15 +69,12 @@ class AgentDynamicPrograming(AgentBase):
         """
         reward = 0
 
-        if (np.array(status) == np.array(status_next)).all():
-            # ステータスが変わっていない場合
-            reward = -10
         if (len(actions_effective_next) <= 1) or not can_action:
             # 行き止まりまたは壁方向を選択した場合
-            reward = -100
+            reward = -10
         if not is_play:
             # ゴールした場合
-            reward = 100000
+            reward = 1000
             # ランダム方策の実施回数をデクリメント
             self.__count_random_policy -= 1
 
@@ -126,21 +90,22 @@ class AgentDynamicPrograming(AgentBase):
         :param number: 出力用のナンバー(fitの実施回数を想定)
         :return: なし
         """
-        # とりうる位置を1次元配列で取得
-        indices = np.random.choice(range(self.__size[0] * self.__size[1]), self.__size[0] * self.__size[1], replace=False)
 
         # 学習を開始
         for i in range(epochs):
+            # とりうる位置を1次元配列で取得
+            indices = np.random.choice(range(self.__size[0] * self.__size[1]),
+                                       self.__size[0] * self.__size[1],
+                                       replace=False)
+
             for index in indices:
                 # スカラー値を座標に変換
                 status = np.array([index // self.__size[0], index % self.__size[0]])
                 # 有効な行動リストを取得
                 actions = self.__environment.get_actions_effective(status)
-                # 行動を取得
-                #action = self.get_action(status)
-                #while action not in actions:
-                #    # 有効リストに含まれている行動が取得できるまでループ
-                #    action = self.get_action(status)
+
+                v = 0
+                count = 0
                 for action in range(4):
                     # 移動先の座標を算出
                     status_next = status.copy()
@@ -152,32 +117,34 @@ class AgentDynamicPrograming(AgentBase):
                         status_next[1] += 1
                     else:
                         status_next[0] -= 1
-                    # 報酬を取得
-                    reward = self.get_reward(None, None, None, not (status_next == np.array([self.__size[1] - 1, self.__size[0] - 1])).all(), None, actions)
 
-                    # 行動価値Q(実際は価値V)の値を算出(移動先の行動価値Qの平均を価値とした)
-                    q = 0
-                    for k in range(4):
-                        try:
-                            q += self.__decay * self.__get_q(status_next, k)
-                        except:
-                            q += 0
-                    q /= 4
-                    q += reward
+                    if action in actions:
+                        # 行動が有効行動リストに含まれる場合
+                        if (status_next == np.array([7, 7])).all():
+                            # 行動有効かつ非プレイ中として報酬を取得
+                            reward = self.get_reward(None, None, True, None, False, None, actions_effective_next=actions)
+                        else:
+                            # 行動有効かつプレイ中として報酬を取得
+                            reward = self.get_reward(None, None, True, None, True, None, actions_effective_next=actions)
+                        # 価値Vの値を算出
+                        v += reward + self.__decay * self.__get_v(status_next)
+                        count += 1
 
-                    if self.__mode_table:
-                        # テーブルモードの場合
-                        self.__q_data[status[1], status[0], action] = q
-                    else:
-                        # ニューラルネットワークモードの場合
-                        #q = self.__model.predict(np.array([status[0], status[1], action])[np.newaxis, :])[0][0]
-                        pass
+                if self.__mode_table:
+                    # テーブルモードの場合
+                    self.__v_data[status[1], status[0]] = v / count
+                else:
+                    # ニューラルネットワークモードの場合
+                    #q = self.__model.predict(np.array([status[0], status[1], action])[np.newaxis, :])[0][0]
+                    pass
+
+            if (i + 1) % 100 == 0:
+                print('エポック数：{0} / {1}'.format(i + 1, epochs))
 
         if self.__mode_table:
             # テーブルモードの場合
             # デーブルの各値をファイルに保存
-            np.save('data\\dynamic_programing\\q_data.npy', self.__q_data)
-            np.save('data\\dynamic_programing\\q_count.npy', self.__q_count)
+            np.save('data\\dynamic_programing\\v_data.npy', self.__v_data)
         else:
             # ニューラルネットワークモードの場合
             # 学習を実施
@@ -185,40 +152,38 @@ class AgentDynamicPrograming(AgentBase):
             # 学習した重みをファイルに保存
             self.__model.save_weights('data\\dynamic_programing\\weights.hdf5')
 
-    def get_q_table(self):
+    def get_v_table(self):
         """
-        行動価値Qのテーブル取得処理
-        行動価値Qのテーブルを返す(テーブルがない場合は生成も行う)
-        :return: 行動価値Qテーブル(x座標, y座標, 行動)
+        価値Vのテーブル取得処理
+        価値Vのテーブルを返す(テーブルがない場合は生成も行う)
+        :return: 価値Vテーブル(x座標, y座標)
         """
         # 戻り値用の領域をすべて0で生成
-        q_data = np.zeros([self.__size[0], self.__size[1], 4])
+        v_data = np.zeros([self.__size[0], self.__size[1]])
         if self.__mode_table:
             # テーブルモードの場合
-            q_data = self.__q_data.copy()
+            v_data = self.__v_data.copy()
         else:
             # ニューラルネットワークモードの場合
-            for i in range(q_data.shape[0]):
-                for j in range(q_data.shape[1]):
-                    for k in range(q_data.shape[2]):
-                        q_data[i, j, k] = self.__get_q((i, j), k)
+            for i in range(v_data.shape[0]):
+                for j in range(v_data.shape[1]):
+                    v_data[i, j] = self.__get_v((i, j))
 
-        return q_data
+        return v_data
 
-    def __get_q(self, status, action):
+    def __get_v(self, status_next):
         """
-        行動価値Q取得処理
-        行動価値Qを算出して返す
-        :param status: 状態
-        :param action: 行動
-        :return: 行動価値Q
+        価値V取得処理
+        次の状態の価値Vを返す
+        :param status_next: 次の状態
+        :return: 価値V
         """
-        q = 0
+        v = 0
         if self.__mode_table:
             # テーブルモードの場合
-            q = self.__q_data[status[1], status[0], action]
+            v = self.__v_data[status_next[1], status_next[0]]
         else:
             # ニューラルネットワークモードの場合
-            q = self.__model.predict(np.array([status[1], status[0], action])[np.newaxis, :])[0][0]
+            v = self.__model.predict(np.array([status_next[1], status_next[0]])[np.newaxis, :])[0][0]
 
-        return q
+        return v

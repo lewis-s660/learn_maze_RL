@@ -10,17 +10,18 @@ from agent_monte_carlo import AgentMonteCarlo
 from agent_dynamic_programing import AgentDynamicPrograming
 
 # モードを指定
-mode = 'monte_carlo'
-
+mode = 'dynamic_programing'
 
 # プレイ回数
-count_play = 1
+count_play = 0
 # 最大ループ数
-count_loop_max = 1
+count_loop_max = 1000
 # エージェント切り替え境界値
 boundary_change_agent = 0
 # ループでの表示間隔
 step_indicate = 100
+# エポック数
+epochs = 10000
 
 # 環境を生成
 environment = Maze()
@@ -43,8 +44,13 @@ elif mode == 'monte_carlo':
 elif mode == 'dynamic_programing':
     # 動的計画法モードの場合
     agent_1 = AgentDynamicPrograming(environment=environment, mode_table=True)
-    necessary_experience = False
+    # プレイ回数を0に変更
+    count_play = 0
+    # 最大ループ数を1に変更(実際にプレイする必要がないため1回の学習(エポック数は1ではない)でよい)
     count_loop_max = 1
+    # エポック数を変更
+    epochs = 1000
+
 
 # 制御インスタンスを生成
 control_1 = Control(environment, [agent_1], is_display=False)
@@ -84,11 +90,15 @@ for i in range(count_loop_max):
         agent = agent_2
 
     # 学習を実施
-    agent.fit(experience, number=i, epochs=100000)
+    agent.fit(experience, number=i, epochs=epochs)
     # 学習データを表示
     #environment.display(agent.get_q_table_experience(experience))
 
-# 学習後の行動価値Qの値を出力
-environment.display(agent.get_q_table(environment.get_actions_effective))
+try:
+    # 学習後の行動価値Qの値を出力
+    environment.display(agent.get_q_table(environment.get_actions_effective))
+except:
+    # 学習後の行動価値Qの値を出力
+    environment.display(agent.get_v_table(), is_q=False)
 
 

@@ -78,3 +78,12 @@ class AgentBase:
         :return: 行動価値Qテーブル(x座標, y座標, 行動)
         """
         return np.array([[[0]]])
+
+
+    def get_v_table(self):
+        """
+        価値Vのテーブル取得処理
+        価値Vのテーブルを返す(テーブルがない場合は生成も行う)
+        :return: 価値Vテーブル(x座標, y座標)
+        """
+        return np.array([[[0]]])
