@@ -23,11 +23,12 @@ class AgentBase:
         """
         pass
 
-    def get_action(self, status):
+    def get_action(self, status, actions_effective):
         """
         行動取得処理
         状態から行動を決定して返す
         :param status: 状態
+        :param actions_effective:  有効行動リスト
         :return: 行動
         """
         return 0
@@ -69,10 +70,11 @@ class AgentBase:
         """
         pass
 
-    def get_q_table(self):
+    def get_q_table(self, get_actions_effective):
         """
         行動価値Qのテーブル取得処理
         行動価値Qのテーブルを返す(テーブルがない場合は生成も行う)
+        :param get_actions_effective: 有効行動リスト取得ハンドラ
         :return: 行動価値Qテーブル(x座標, y座標, 行動)
         """
         return np.array([[[0]]])

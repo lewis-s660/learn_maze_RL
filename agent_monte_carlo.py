@@ -40,8 +40,8 @@ class AgentMonteCarlo(AgentBase):
                 self.__model = tf.keras.models.load_model('data\\monte_carlo\\model.hdf5')
             except:
                 # モデルの読み込みに失敗した場合はモデルを生成
-                self.__model = tf.keras.models.Sequential([tf.keras.layers.Dense(16, input_shape=(3, ), activation='relu'),
-                                                           #tf.keras.layers.Dense(1024, activation='relu'),
+                self.__model = tf.keras.models.Sequential([tf.keras.layers.Dense(16, input_shape=(7, ), activation='relu'),
+                                                           tf.keras.layers.Dense(128, activation='relu'),
                                                            tf.keras.layers.Dense(16, activation='relu'),
                                                            tf.keras.layers.Dense(1)])
                 self.__model.compile(optimizer='adam', loss='mse')
@@ -56,11 +56,12 @@ class AgentMonteCarlo(AgentBase):
                 # 重みの読み込みに失敗した場合は何もしない
                 pass
 
-    def get_action(self, status):
+    def get_action(self, status, actions_effective):
         """
         行動取得処理
         状態から行動を決定して返す
         :param status: 状態
+        :param actions_effective:  有効行動リスト
         :return: 行動
         """
         if 0 < self.__count_random_policy:
@@ -72,10 +73,10 @@ class AgentMonteCarlo(AgentBase):
             value = np.random.rand()
 
             # 現在の状態における各行動での最大の行動価値Qを取得処理
-            q_max = self.__get_q(status, 0)
+            q_max = self.__get_q(status, 0, actions_effective)
             action = 0
             for i in range(1, 4):
-                q = self.__get_q(status, i)
+                q = self.__get_q(status, i, actions_effective)
                 if q_max < q:
                     # 今までの中で最大の行動価値Qを記憶
                     q_max = q
@@ -149,6 +150,8 @@ class AgentMonteCarlo(AgentBase):
             for i in range(count):
                 # 新しい経験のデータから処理を実施
                 status = experience['status'][-1 * i]
+                actions_effective_one_hot = np.zeros([4])
+                actions_effective_one_hot[experience['actions_effective'][-1 * i]] = 1
                 action = experience['action'][-1 * i]
                 # 行動価値Qを算出
                 q = experience['reward'][-1 * i] + self.__decay * q
@@ -160,14 +163,14 @@ class AgentMonteCarlo(AgentBase):
                     # ニューラルネットワークモードの場合
                     is_register = False
                     for j in range(len(train_data)):
-                        if train_data[j] == (status[1], status[0], action):
+                        if train_data[j] == (status[1], status[0], action, actions_effective_one_hot[0], actions_effective_one_hot[1], actions_effective_one_hot[2], actions_effective_one_hot[3]):
                             # 登録済みのステータスと行動の組み合わせの場合
                             is_register = True
                             break
 
                     if not is_register:
                         # 未登録のステータスと行動の組み合わせの場合
-                        train_data.append((status[1], status[0], action))
+                        train_data.append((status[1], status[0], action, actions_effective_one_hot[0], actions_effective_one_hot[1], actions_effective_one_hot[2], actions_effective_one_hot[3]))
                         train_label.append(q)
 
             if self.__mode_table:
@@ -187,10 +190,11 @@ class AgentMonteCarlo(AgentBase):
                 # 学習した重みをファイルに保存
                 self.__model.save_weights('data\\monte_carlo\\weights.hdf5')
 
-    def get_q_table(self):
+    def get_q_table(self, get_actions_effective):
         """
         行動価値Qのテーブル取得処理
         行動価値Qのテーブルを返す(テーブルがない場合は生成も行う)
+        :param get_actions_effective: 有効行動リスト取得ハンドラ
         :return: 行動価値Qテーブル(x座標, y座標, 行動)
         """
         # 戻り値用の領域をすべて0で生成
@@ -203,16 +207,17 @@ class AgentMonteCarlo(AgentBase):
             for i in range(q_data.shape[0]):
                 for j in range(q_data.shape[1]):
                     for k in range(q_data.shape[2]):
-                        q_data[i, j, k] = self.__get_q((i, j), k)
+                        q_data[i, j, k] = self.__get_q((i, j), k, get_actions_effective((i, j)))
 
         return q_data
 
-    def __get_q(self, status, action):
+    def __get_q(self, status, action, actions_effective):
         """
         行動価値Q取得処理
         行動価値Qを算出して返す
         :param status: 状態
         :param action: 行動
+        :param actions_effective: 有効行動リスト
         :return: 行動価値Q
         """
         q = 0
@@ -221,7 +226,9 @@ class AgentMonteCarlo(AgentBase):
             q = self.__q_data[status[1], status[0], action]
         else:
             # ニューラルネットワークモードの場合
-            q = self.__model.predict(np.array([status[1], status[0], action])[np.newaxis, :])[0][0]
+            actions_effective_one_hot = np.zeros([4])
+            actions_effective_one_hot[actions_effective] = 1
+            q = self.__model.predict(np.array([status[1], status[0], action, actions_effective_one_hot[0], actions_effective_one_hot[1], actions_effective_one_hot[2], actions_effective_one_hot[3]])[np.newaxis, :])[0][0]
 
         return q
 

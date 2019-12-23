@@ -43,8 +43,10 @@ class Control:
                 self.__players[j].initialize()
                 experience[j].append(dict())
                 experience[j][-1]['status'] = list()
+                experience[j][-1]['actions_effective'] = list()
                 experience[j][-1]['action'] = list()
                 experience[j][-1]['status_next'] = list()
+                experience[j][-1]['actions_effective_next'] = list()
                 experience[j][-1]['reward'] = list()
 
             if self.__is_display:
@@ -61,10 +63,14 @@ class Control:
                         counter += 1
                         # 行動前の状態を取得
                         status = self.__environment.status
+                        # 行動前の有効な行動リストを取得
+                        actions_effective = self.__environment.get_actions_effective()
                         # 行動を取得
-                        action = self.__players[j].get_action(self.__environment.status)
+                        action = self.__players[j].get_action(self.__environment.status, actions_effective)
                         # 行動を実施
                         can_action = self.__environment.set_action(action)
+                        # 行動後の有効な行動リストを取得
+                        actions_effective_next = self.__environment.get_actions_effective()
                         # 環境からの情報を通知
                         reward = self.__players[j].get_reward(status,
                                                               action,
@@ -72,11 +78,13 @@ class Control:
                                                               self.__environment.status,
                                                               self.__environment.is_play,
                                                               self.__environment.score,
-                                                              self.__environment.get_actions_effective())
+                                                              actions_effective_next)
 
                         experience[j][-1]['status'].append(status)
+                        experience[j][-1]['actions_effective'].append(actions_effective)
                         experience[j][-1]['action'].append(action)
                         experience[j][-1]['status_next'].append(self.__environment.status)
+                        experience[j][-1]['actions_effective_next'].append(actions_effective_next)
                         experience[j][-1]['reward'].append(reward)
 
                         if is_indicate and (counter % 100 == 0):
