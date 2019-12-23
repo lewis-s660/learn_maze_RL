@@ -38,9 +38,9 @@ class AgentDynamicPrograming(AgentBase):
                 self.__model = tf.keras.models.load_model('data\\dynamic_programing\\model.hdf5')
             except:
                 # モデルの読み込みに失敗した場合はモデルを生成
-                self.__model = tf.keras.models.Sequential([tf.keras.layers.Dense(16, input_shape=(3, ), activation='relu'),
-                                                           #tf.keras.layers.Dense(1024, activation='relu'),
-                                                           tf.keras.layers.Dense(16, activation='relu'),
+                self.__model = tf.keras.models.Sequential([tf.keras.layers.Dense(64, input_shape=(2, ), activation='relu'),
+                                                           tf.keras.layers.Dense(1024, activation='relu'),
+                                                           tf.keras.layers.Dense(64, activation='relu'),
                                                            tf.keras.layers.Dense(1)])
                 self.__model.compile(optimizer='adam', loss='mse')
                 # 生成したモデルを保存
@@ -91,6 +91,9 @@ class AgentDynamicPrograming(AgentBase):
         :return: なし
         """
 
+        train_data = list()
+        train_label = list()
+
         # 学習を開始
         for i in range(epochs):
             # とりうる位置を1次元配列で取得
@@ -135,8 +138,13 @@ class AgentDynamicPrograming(AgentBase):
                     self.__v_data[status[1], status[0]] = v / count
                 else:
                     # ニューラルネットワークモードの場合
-                    #q = self.__model.predict(np.array([status[0], status[1], action])[np.newaxis, :])[0][0]
-                    pass
+                    train_data.append(status)
+                    train_label.append(v / count)
+
+            if not self.__mode_table:
+                # ニューラルネットワークモードの場合
+                # 1回のデータ収集で処理を抜ける(テーブルモードとニューラルネットワークモードでのエポック数の概念の違いによる)
+                break
 
             if (i + 1) % 100 == 0:
                 print('エポック数：{0} / {1}'.format(i + 1, epochs))
@@ -148,7 +156,7 @@ class AgentDynamicPrograming(AgentBase):
         else:
             # ニューラルネットワークモードの場合
             # 学習を実施
-            #self.__model.fit(np.array(train_data), np.array(train_label), epochs=epochs)
+            self.__model.fit(np.array(train_data), np.array(train_label), epochs=epochs)
             # 学習した重みをファイルに保存
             self.__model.save_weights('data\\dynamic_programing\\weights.hdf5')
 

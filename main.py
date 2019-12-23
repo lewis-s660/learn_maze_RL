@@ -12,7 +12,7 @@ from agent_dynamic_programing import AgentDynamicPrograming
 # モードを指定
 mode = 'dynamic_programing'
 
-mode_table = True
+mode_table = False
 # プレイ回数
 count_play = 1
 # 最大ループ数
@@ -57,12 +57,18 @@ elif mode == 'dynamic_programing':
         # プレイ回数を0に変更
         count_play = 0
         # 最大ループ数を1に変更(実際にプレイする必要がないため1回の学習(エポック数は1ではない)でよい)
-        count_loop_max = 1
+        count_loop_max = 1000
         # エポック数を変更
-        epochs = 1000
+        epochs = 100000
     else:
         # ニューラルネットワークモードの場合
-        pass
+        agent_1 = AgentDynamicPrograming(environment=environment, mode_table=mode_table)
+        # プレイ回数を0に変更
+        count_play = 0
+        # 最大ループ数を1に変更(実際にプレイする必要がないため1回の学習(エポック数は1ではない)でよい)
+        count_loop_max = 1000
+        # エポック数を変更
+        epochs = 10000
 
 # 制御インスタンスを生成
 control_1 = Control(environment, [agent_1], is_display=False)
