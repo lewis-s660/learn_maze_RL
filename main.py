@@ -38,7 +38,7 @@ elif mode == 'monte_carlo':
     # モンテカルロ法モードの場合
     #agent_1 = AgentMonteCarlo(epsilon=0)
     #agent_1 = AgentMonteCarlo(mode_table=True)
-    agent_1 = AgentMonteCarlo(mode_table=False, count_random_action=1)
+    agent_1 = AgentMonteCarlo(mode_table=False, count_random_policy=1)
     #agent_2 = AgentMonteCarlo(mode_table=False)
 elif mode == 'dynamic_programing':
     # 動的計画法モードの場合
@@ -84,11 +84,11 @@ for i in range(count_loop_max):
         agent = agent_2
 
     # 学習を実施
-    agent.fit(experience, number=i, epochs=1000000)
+    agent.fit(experience, number=i, epochs=100000)
     # 学習データを表示
     #environment.display(agent.get_q_table_experience(experience))
 
 # 学習後の行動価値Qの値を出力
-environment.display(agent.get_q_table())
+environment.display(agent.get_q_table(environment.get_actions_effective))
 
 
