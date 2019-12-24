@@ -159,11 +159,11 @@ class AgentDynamicPrograming(AgentBase):
                 break
 
             if (i + 1) % 100 == 0:
-                print('エポック数：{0} / {1}'.format(i + 1, epochs))
+                print('ループ数：{0}  エポック数：{1} / {2}'.format(number, i + 1, epochs))
 
             if not greater_gradient:
                 # すべての勾配の傾きが最小勾配以下の場合
-                print('エポック数：{0} / {1}'.format(i + 1, epochs))
+                print('ループ数：{0}  エポック数：{1} / {2}'.format(number, i + 1, epochs))
                 break
 
         if self.__mode_table:
@@ -172,10 +172,11 @@ class AgentDynamicPrograming(AgentBase):
             np.save('data\\dynamic_programing\\v_data.npy', self.__v_data)
         else:
             # ニューラルネットワークモードの場合
+            print('{0}回目の学習'.format(number + 1))
             if greater_gradient:
                 # 1つ以上の勾配の傾きが最小勾配より大きい場合
                 # 学習を実施
-                self.__model.fit(np.array(train_data), np.array(train_label), epochs=epochs)
+                self.__model.fit(np.array(train_data), np.array(train_label), epochs=epochs, verbose=0)
                 # 学習した重みをファイルに保存
                 self.__model.save_weights('data\\dynamic_programing\\weights.hdf5')
 
