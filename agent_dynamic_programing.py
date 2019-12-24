@@ -92,10 +92,6 @@ class AgentDynamicPrograming(AgentBase):
         :param number: 出力用のナンバー(fitの実施回数を想定)
         :return: なし
         """
-
-        train_data = list()
-        train_label = list()
-
         # 学習を開始
         for i in range(epochs):
             # とりうる位置を1次元配列で取得
@@ -136,22 +132,18 @@ class AgentDynamicPrograming(AgentBase):
                         v += reward + self.__decay * self.__get_v(status_next)
                         count += 1
 
+                data = self.__get_v(status)
+                grad = (v / count) - data
                 if self.__mode_table:
                     # テーブルモードの場合
-                    data = self.__v_data[status[1], status[0]]
-                    self.__v_data[status[1], status[0]] = self.__v_data[status[1], status[0]] + self.__eta * ((v / count) - self.__v_data[status[1], status[0]])
-                    if self.__difference_minimum < abs(data - self.__v_data[status[1], status[0]]):
-                        # 変化が少なくない場合
-                        is_change = True
+                    self.__v_data[status[1], status[0]] = data + self.__eta * grad
                 else:
                     # ニューラルネットワークモードの場合
-                    train_data.append(status)
-                    train_label.append(v / count)
+                    self.__model.train_on_batch(status[np.newaxis, :], np.array([data + self.__eta * grad]))
 
-            if not self.__mode_table:
-                # ニューラルネットワークモードの場合
-                # 1回のデータ収集で処理を抜ける(テーブルモードとニューラルネットワークモードでのエポック数の概念の違いによる)
-                break
+                if self.__difference_minimum < abs(data - self.__get_v(status)):
+                    # 変化が少なくない場合
+                    is_change = True
 
             if (i + 1) % 100 == 0:
                 print('エポック数：{0} / {1}'.format(i + 1, epochs))
@@ -167,8 +159,6 @@ class AgentDynamicPrograming(AgentBase):
             np.save('data\\dynamic_programing\\v_data.npy', self.__v_data)
         else:
             # ニューラルネットワークモードの場合
-            # 学習を実施
-            self.__model.fit(np.array(train_data), np.array(train_label), epochs=epochs)
             # 学習した重みをファイルに保存
             self.__model.save_weights('data\\dynamic_programing\\weights.hdf5')
 

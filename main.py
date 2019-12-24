@@ -8,6 +8,7 @@ from agent_user import AgentUser
 from agent_random import AgentRandom
 from agent_monte_carlo import AgentMonteCarlo
 from agent_dynamic_programing import AgentDynamicPrograming
+from agent_td_q import AgentTDQ
 
 # モードを指定
 mode = 'dynamic_programing'
@@ -69,6 +70,14 @@ elif mode == 'dynamic_programing':
         count_loop_max = 1000
         # エポック数を変更
         epochs = 10000
+elif mode == 'td_q':
+    # 動的計画法モードの場合
+    if mode_table:
+        # テーブルモードの場合
+        agent_1 = AgentTDQ(environment=environment, mode_table=mode_table)
+    else:
+        # ニューラルネットワークモードの場合
+        agent_1 = AgentTDQ(environment=environment, mode_table=mode_table)
 
 # 制御インスタンスを生成
 control_1 = Control(environment, [agent_1], is_display=False)
