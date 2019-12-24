@@ -1,5 +1,3 @@
-import sys
-
 import numpy as np
 import tensorflow as tf
 
@@ -7,11 +5,13 @@ from agent_base import AgentBase
 
 
 class AgentDynamicPrograming(AgentBase):
-    def __init__(self, environment, epsilon=0.1, decay=0.9, mode_table=True, size=(8, 8)):
+    def __init__(self, environment, epsilon=0.1, decay=0.9, eta=0.1, difference_minimum=0.001, mode_table=True, size=(8, 8)):
         """
         コンストラクタ
         :param epsilon: ε-Greedy方策で使用するεの値
         :param decay: 行動価値Qを算出する際の減衰率
+        :param eta: 学習率
+        :param difference_minimum: 学習時の終了条件の最小差分
         :param mode_table: テーブルモード選択フラグ(True:テーブルモード,False:ニューラルネットワークモード)
         :param size: 状態サイズ
         """
@@ -19,6 +19,8 @@ class AgentDynamicPrograming(AgentBase):
         self.__environment = environment
         self.__epsilon = epsilon
         self.__decay = decay
+        self.__eta = eta
+        self.__difference_minimum = difference_minimum
         self.__mode_table = mode_table
         self.__size = np.array(size)
         self.__count_random_policy = 0
@@ -101,6 +103,7 @@ class AgentDynamicPrograming(AgentBase):
                                        self.__size[0] * self.__size[1],
                                        replace=False)
 
+            is_change = False
             for index in indices:
                 # スカラー値を座標に変換
                 status = np.array([index // self.__size[0], index % self.__size[0]])
@@ -135,7 +138,11 @@ class AgentDynamicPrograming(AgentBase):
 
                 if self.__mode_table:
                     # テーブルモードの場合
-                    self.__v_data[status[1], status[0]] = v / count
+                    data = self.__v_data[status[1], status[0]]
+                    self.__v_data[status[1], status[0]] = self.__v_data[status[1], status[0]] + self.__eta * ((v / count) - self.__v_data[status[1], status[0]])
+                    if self.__difference_minimum < abs(data - self.__v_data[status[1], status[0]]):
+                        # 変化が少なくない場合
+                        is_change = True
                 else:
                     # ニューラルネットワークモードの場合
                     train_data.append(status)
@@ -148,6 +155,11 @@ class AgentDynamicPrograming(AgentBase):
 
             if (i + 1) % 100 == 0:
                 print('エポック数：{0} / {1}'.format(i + 1, epochs))
+
+            if not is_change:
+                # 変化が少ない場合
+                print('エポック数：{0} / {1}'.format(i + 1, epochs))
+                break
 
         if self.__mode_table:
             # テーブルモードの場合
