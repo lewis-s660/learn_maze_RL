@@ -1,4 +1,4 @@
-import sys
+import os
 
 import numpy as np
 import tensorflow as tf
@@ -6,10 +6,12 @@ import tensorflow as tf
 from agent_base import AgentBase
 
 
-class AgentTDQ(AgentBase):
-    def __init__(self, environment, epsilon=0.1, decay=0.9, eta=0.1, gradient_minimum=0.001, mode_table=True, size=(8, 8), count_random_policy=0):
+class AgentTD(AgentBase):
+    def __init__(self, environment, mode_sarsa, epsilon=0.1, decay=0.9, eta=0.1, gradient_minimum=0.001, mode_table=True, size=(8, 8), count_random_policy=0):
         """
         コンストラクタ
+        :param environment: 環境
+        :param mode_sarsa: SARSAフラグ
         :param epsilon: ε-Greedy方策で使用するεの値
         :param decay: 行動価値Qを算出する際の減衰率
         :param eta: 学習率
@@ -20,6 +22,7 @@ class AgentTDQ(AgentBase):
         """
         super().__init__()
         self.__environment = environment
+        self.__mode_sarsa = mode_sarsa
         self.__epsilon = epsilon
         self.__decay = decay
         self.__eta = eta
@@ -27,20 +30,38 @@ class AgentTDQ(AgentBase):
         self.__mode_table = mode_table
         self.__size = np.array(size)
         self.__count_random_policy = count_random_policy
+        self.__action = None
+        path_directory = 'data\\td'
 
         if self.__mode_table:
             # テーブルモードの場合
+            if self.__mode_sarsa:
+                # SARSAモードの場合
+                self.__path_data = os.path.join(path_directory, "q_data_sarsa.npy")
+            else:
+                # SARSAモードでない場合
+                self.__path_data = os.path.join(path_directory, "q_data.npy")
+
             try:
                 # テーブルの情報をファイルから読み込み
-                self.__q_data = np.load('data\\td_q\\q_data.npy')
+                self.__q_data = np.load(self.__path_data)
             except:
                 # ファイルからの読み込みに失敗した場合はすべて0で領域を確保
                 self.__q_data = np.zeros([self.__size[0], self.__size[1], 4])
         else:
             # ニューラルネットワークモードの場合
+            if self.__mode_sarsa:
+                # SARSAモードの場合
+                self.__path_model = os.path.join(path_directory, "model_sarsa.hdf5")
+                self.__path_weights = os.path.join(path_directory, "weights_sarsa.hdf5")
+            else:
+                # SARSAモードでない場合
+                self.__path_model = os.path.join(path_directory, "model.hdf5")
+                self.__path_weights = os.path.join(path_directory, "weights.hdf5")
+
             try:
                 # モデルをファイルから読み込み
-                self.__model = tf.keras.models.load_model('data\\td_q\\model.hdf5')
+                self.__model = tf.keras.models.load_model(self.__path_model)
             except:
                 # モデルの読み込みに失敗した場合はモデルを生成
                 self.__model = tf.keras.models.Sequential([tf.keras.layers.Dense(16, input_shape=(3, ), activation='relu'),
@@ -49,46 +70,63 @@ class AgentTDQ(AgentBase):
                                                            tf.keras.layers.Dense(1)])
                 self.__model.compile(optimizer='adam', loss='mse')
                 # 生成したモデルを保存
-                tf.keras.models.save_model(self.__model, 'data\\td_q\\model.hdf5')
+                tf.keras.models.save_model(self.__model, self.__path_model)
             # 使用するモデルの概要を出力
             self.__model.summary()
+
             try:
                 # 重みをファイルから読み込み
-                self.__model.load_weights('data\\td_q\\weights.hdf5')
+                self.__model.load_weights(self.__path_weights)
             except:
                 # 重みの読み込みに失敗した場合は何もしない
                 pass
 
-    def get_action(self, status, actions_effective):
+    @property
+    def mode_sarsa(self):
+        """
+        SARSAモードフラグ
+        :return: SARSAモードフラグ(True:SARSA,False:SARSA以外)
+        """
+        return self.__mode_sarsa
+
+    def get_action(self, status, actions_effective, is_previous=False):
         """
         行動取得処理
         状態から行動を決定して返す
         :param status: 状態
-        :param actions_effective:  有効行動リスト
+        :param actions_effective: 有効行動リスト
+        :param is_previous: 前回取得値取得フラグ
         :return: 行動
         """
-        if 0 < self.__count_random_policy:
-            # ランダム方策で行動選択をする場合
-            action = np.random.randint(0, 4)
+
+        if is_previous and self.__action is not None:
+            # 前回取得値の取得かつ前回取得値が存在する場合
+            action = self.__action
         else:
-            # ε-Greedy方策で行動を選択する場合
-            # εと比較するための値を取得
-            value = np.random.rand()
+            # 新たに行動を取得する必要がある場合
+            if 0 < self.__count_random_policy:
+                # ランダム方策で行動選択をする場合
+                action = np.random.randint(0, 4)
+            else:
+                # ε-Greedy方策で行動を選択する場合
+                # εと比較するための値を取得
+                value = np.random.rand()
 
-            # 現在の状態における各行動での最大の行動価値Qを取得処理
-            q_max = self.__get_q(status, 0, None)
-            action = 0
-            for i in range(1, 4):
-                q = self.__get_q(status, i, None)
-                if q_max < q:
-                    # 今までの中で最大の行動価値Qを記憶
-                    q_max = q
-                    action = i
+                # 現在の状態における各行動での最大の行動価値Qを取得処理
+                q_max = self.__get_q(status, 0, None)
+                action = 0
+                for i in range(1, 4):
+                    q = self.__get_q(status, i, None)
+                    if q_max < q:
+                        # 今までの中で最大の行動価値Qを記憶
+                        q_max = q
+                        action = i
 
-            if value < self.__epsilon:
-                # ランダムで行動を決定する場合
-                # 行動価値Qが最大となる行動以外からランダムに行動を選択
-                action = (np.random.randint(action + 1, action + 4)) % 4
+                if value < self.__epsilon:
+                    # ランダムで行動を決定する場合
+                    # 行動価値Qが最大となる行動以外からランダムに行動を選択
+                    action = (np.random.randint(action + 1, action + 4)) % 4
+            self.__action = action
 
         return action
 
@@ -131,14 +169,19 @@ class AgentTDQ(AgentBase):
         """
         q = self.__get_q(status, action, None)
 
-        # 次の状態での最大の行動価値Qを取得
-        q_max_next = 0
-        for i in range(4):
-            q_next = self.__get_q(status_next, i, None)
-            if q_max_next < q_next:
-                q_max_next = q_next
+        q_next = 0
+        if self.__mode_sarsa:
+            # SARSAモードの場合
+            q_next = self.__get_q(status_next, action_next, None)
+        else:
+            # SARSAモードでない場合
+            # 次の状態での最大の行動価値Qを取得
+            for i in range(4):
+                q_next_tmp = self.__get_q(status_next, i, None)
+                if q_next < q_next_tmp:
+                    q_next = q_next_tmp
 
-        q = q + self.__eta * ((reward + self.__decay * q_max_next) - q)
+        q = q + self.__eta * ((reward + self.__decay * q_next) - q)
 
         if self.__mode_table:
             # テーブルモードの場合
@@ -161,7 +204,7 @@ class AgentTDQ(AgentBase):
         if self.__mode_table:
             # テーブルモードの場合
             # デーブルの各値をファイルに保存
-            np.save('data\\td_q\\v_data.npy', self.__q_data)
+            np.save(self.__path_data, self.__q_data)
         elif experience is not None:
             # ニューラルネットワークモードかつ学習データが存在する場合
             # 1回のプレイの経験のみを使用する
@@ -186,7 +229,7 @@ class AgentTDQ(AgentBase):
             # 学習を実施
             self.__model.fit(np.array(train_data), np.array(train_label), epochs=epochs)
             # 学習した重みをファイルに保存
-            self.__model.save_weights('data\\td_q\\weights.hdf5')
+            self.__model.save_weights(self.__path_weights)
 
     def get_q_table(self, get_actions_effective):
         """

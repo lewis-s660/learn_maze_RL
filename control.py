@@ -2,10 +2,9 @@ from datetime import datetime, timedelta
 
 
 class Control:
-    def __init__(self, environment, players, is_sarsa=False, is_display=True):
+    def __init__(self, environment, players, is_display=True):
         self.__environment = environment
         self.__players = players
-        self.__is_sarsa = is_sarsa
         self.__is_display = is_display
         self.__time_start = datetime.now()
         self.__time_elapsed = timedelta()
@@ -75,7 +74,7 @@ class Control:
                         # 行動前の有効な行動リストを取得
                         actions_effective = self.__environment.get_actions_effective()
                         # 行動を取得
-                        if is_first[j] or not self.__is_sarsa:
+                        if is_first[j] or not self.__players[j].mode_sarsa:
                             # 初回取得またはSARSAモードでない場合
                             action = self.__players[j].get_action(self.__environment.status, actions_effective)
                         else:
@@ -95,7 +94,7 @@ class Control:
                                                               self.__environment.score,
                                                               actions_effective_next)
                         action_next = None
-                        if self.__is_sarsa:
+                        if self.__players[j].mode_sarsa:
                             # SARSAモードの場合
                             # 次回の行動を取得する
                             action_next = self.__players[j].get_action(self.__environment.status, actions_effective)

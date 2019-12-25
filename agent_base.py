@@ -5,6 +5,14 @@ class AgentBase:
     def __init__(self):
         pass
 
+    @property
+    def mode_sarsa(self):
+        """
+        SARSAモードフラグ
+        :return: SARSAモードフラグ(True:SARSA,False:SARSA以外)
+        """
+        return False
+
     def initialize(self):
         """
         初期化実行処理

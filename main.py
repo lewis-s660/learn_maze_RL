@@ -8,12 +8,13 @@ from agent_user import AgentUser
 from agent_random import AgentRandom
 from agent_monte_carlo import AgentMonteCarlo
 from agent_dynamic_programing import AgentDynamicPrograming
-from agent_td_q import AgentTDQ
+from agent_td import AgentTD
 
 # モードを指定
-mode = 'td_q'
+mode = 'td_sarsa'
+# テーブルモード
+mode_table = True
 
-mode_table = False
 # プレイ回数
 count_play = 1
 # 最大ステップ数
@@ -82,12 +83,28 @@ elif mode == 'td_q':
         step_max = 100000
         # 最大ループ数を1000に変更
         count_loop_max = 1000
-        agent_1 = AgentTDQ(environment=environment, mode_table=mode_table, count_random_policy=10)
+        agent_1 = AgentTD(environment=environment, mode_sarsa=False, mode_table=mode_table, count_random_policy=10)
     else:
         # ニューラルネットワークモードの場合
         # 最大ループ数を1000に変更
         count_loop_max = 1000
-        agent_1 = AgentTDQ(environment=environment, mode_table=mode_table, count_random_policy=10)
+        agent_1 = AgentTD(environment=environment, mode_sarsa=False, mode_table=mode_table, count_random_policy=10)
+elif mode == 'td_sarsa':
+    # TD-Q法モードの場合
+    # プレイ回数を1に変更
+    count_play = 1
+    if mode_table:
+        # テーブルモードの場合
+        # 最大ステップ数を10000に変更
+        step_max = 10000
+        # 最大ループ数を1000に変更
+        count_loop_max = 1000
+        agent_1 = AgentTD(environment=environment, mode_sarsa=True, mode_table=mode_table, count_random_policy=0)
+    else:
+        # ニューラルネットワークモードの場合
+        # 最大ループ数を1000に変更
+        count_loop_max = 1000
+        agent_1 = AgentTD(environment=environment, mode_sarsa=True, mode_table=mode_table, count_random_policy=10)
 
 # 制御インスタンスを生成
 control_1 = Control(environment, [agent_1], is_display=False)
