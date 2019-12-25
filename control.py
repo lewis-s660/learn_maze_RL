@@ -2,9 +2,10 @@ from datetime import datetime, timedelta
 
 
 class Control:
-    def __init__(self, environment, players, is_display=True):
+    def __init__(self, environment, players, is_sarsa=False, is_display=True):
         self.__environment = environment
         self.__players = players
+        self.__is_sarsa = is_sarsa
         self.__is_display = is_display
         self.__time_start = datetime.now()
         self.__time_elapsed = timedelta()
@@ -22,11 +23,16 @@ class Control:
 
         return self.__time_elapsed
 
-    def play(self, count=1, is_indicate=True):
+    def play(self, count=1, is_indicate=True, step_max=0):
         """
         プレイを実施
+        :param count: プレイ回数
+        :param is_indicate: 表示フラグ
+        :param step_max: 最大ステップ数
         :return: プレイを実施しての経験
         """
+
+        step = step_max
 
         # 経験(1階層：各プレイヤーのリスト、2階層：各プレイ情報のリスト、3階層：属性のディクショナリ、4階層：データの値)
         experience = list()
@@ -46,8 +52,10 @@ class Control:
                 experience[j][-1]['actions_effective'] = list()
                 experience[j][-1]['action'] = list()
                 experience[j][-1]['status_next'] = list()
+                experience[j][-1]['action_next'] = list()
                 experience[j][-1]['actions_effective_next'] = list()
                 experience[j][-1]['reward'] = list()
+                experience[j][-1]['q'] = list()
 
             if self.__is_display:
                 # 表示する場合
@@ -55,6 +63,7 @@ class Control:
                 self.__environment.display()
 
             counter = 0
+            is_first = [True] * len(self.__players)
 
             # プレイを最後まで実施
             while True:
@@ -66,7 +75,13 @@ class Control:
                         # 行動前の有効な行動リストを取得
                         actions_effective = self.__environment.get_actions_effective()
                         # 行動を取得
-                        action = self.__players[j].get_action(self.__environment.status, actions_effective)
+                        if is_first[j] or not self.__is_sarsa:
+                            # 初回取得またはSARSAモードでない場合
+                            action = self.__players[j].get_action(self.__environment.status, actions_effective)
+                        else:
+                            # SARSAモードの場合
+                            action = self.__players[j].get_action(self.__environment.status, actions_effective, is_previous=False)
+                        is_first[j] = False
                         # 行動を実施
                         can_action = self.__environment.set_action(action)
                         # 行動後の有効な行動リストを取得
@@ -79,13 +94,21 @@ class Control:
                                                               self.__environment.is_play,
                                                               self.__environment.score,
                                                               actions_effective_next)
+                        action_next = None
+                        if self.__is_sarsa:
+                            # SARSAモードの場合
+                            # 次回の行動を取得する
+                            action_next = self.__players[j].get_action(self.__environment.status, actions_effective)
+                        q = self.__players[i].get_q(status, action, self.__environment.status, action_next, reward)
 
                         experience[j][-1]['status'].append(status)
                         experience[j][-1]['actions_effective'].append(actions_effective)
                         experience[j][-1]['action'].append(action)
                         experience[j][-1]['status_next'].append(self.__environment.status)
+                        experience[j][-1]['action_next'].append(action_next)
                         experience[j][-1]['actions_effective_next'].append(actions_effective_next)
                         experience[j][-1]['reward'].append(reward)
+                        experience[j][-1]['q'].append(q)
 
                         if is_indicate and (counter % 100 == 0):
                             print('　　　play count:{0}回目'.format(counter))
@@ -111,6 +134,13 @@ class Control:
                     for j in range(len(self.__players)):
                         self.__players[j].adjust_experience(experience[j][-1], self.__environment.score)
                     break
+
+                if 0 < step_max:
+                    # 最大ステップ数の指定がある場合
+                    step -= 1
+                    if step <= 0:
+                        # 指定回数のステップの実行が終わった場合
+                        break
 
             # 終了処理を実施
             for j in range(len(self.__players)):

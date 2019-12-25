@@ -11,13 +11,15 @@ from agent_dynamic_programing import AgentDynamicPrograming
 from agent_td_q import AgentTDQ
 
 # モードを指定
-mode = 'dynamic_programing'
+mode = 'td_q'
 
-mode_table = False
+mode_table = True
 # プレイ回数
 count_play = 1
+# 最大ステップ数
+step_max = 0
 # 最大ループ数
-count_loop_max = 1000
+count_loop_max = 1
 # エージェント切り替え境界値
 boundary_change_agent = 0
 # ループでの表示間隔
@@ -71,10 +73,16 @@ elif mode == 'dynamic_programing':
         # エポック数を変更
         epochs = 10000
 elif mode == 'td_q':
-    # 動的計画法モードの場合
+    # TD-Q法モードの場合
+    # プレイ回数を1に変更
+    count_play = 1
+    # 最大ステップ数を100000に変更
+    step_max = 100000
+    # 最大ループ数を1000に変更
+    count_loop_max = 1000
     if mode_table:
         # テーブルモードの場合
-        agent_1 = AgentTDQ(environment=environment, mode_table=mode_table)
+        agent_1 = AgentTDQ(environment=environment, mode_table=mode_table, count_random_policy=10)
     else:
         # ニューラルネットワークモードの場合
         agent_1 = AgentTDQ(environment=environment, mode_table=mode_table)
@@ -101,13 +109,13 @@ for i in range(count_loop_max):
             control = control_2
 
         # 指定回数のプレイを実施
-        experience = control.play(count_play, is_indicate=True)
+        experience = control.play(count_play, is_indicate=True, step_max=step_max)
         # ゴールまでの手数を記憶
         count_to_goal.append(environment.count)
 
         if (0 < i) and ((i % step_indicate == 0) or (i == count_loop_max - 1)):
             # 表示のタイミングの場合
-            print('プレイ回数：{0} 攻略手数：{1} 過去{2}回の平均：{3:.2f} 過去{2}回の最小攻略手数:{4}'.format(i, environment.count, step_indicate, mean(count_to_goal[-100:]), min(count_to_goal[-100:])))
+            print('プレイ回数：{0} 攻略手数：{1} 過去{2}回の平均：{3:.2f} 過去{2}回の最小攻略手数:{4}'.format(i + 1, environment.count, step_indicate, mean(count_to_goal[-100:]), min(count_to_goal[-100:])))
 
     if control_2 is None:
         # 2つ目の制御インスタンスが存在しない場合

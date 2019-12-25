@@ -23,12 +23,13 @@ class AgentBase:
         """
         pass
 
-    def get_action(self, status, actions_effective):
+    def get_action(self, status, actions_effective, is_previous=False):
         """
         行動取得処理
         状態から行動を決定して返す
         :param status: 状態
         :param actions_effective:  有効行動リスト
+        :param is_previous: 前回取得値取得フラグ
         :return: 行動
         """
         return 0
@@ -45,6 +46,19 @@ class AgentBase:
         :param score:　スコア
         :param actions_effective_next: 行動後の状態で選択可能な行動のリスト
         :return: 報酬
+        """
+        return 0
+
+    def get_q(self, status, action, status_next, action_next, reward):
+        """
+        報酬取得処理
+        行動とその前後の状態などの情報から報酬を決定して返す
+        :param status: 行動前の状態
+        :param action: 行動
+        :param status_next: 行動後の状態
+        :param action_next: 行動後の状態の行動
+        :param reward: 報酬
+        :return: 行動価値Q
         """
         return 0
 
