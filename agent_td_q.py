@@ -43,7 +43,7 @@ class AgentTDQ(AgentBase):
                 self.__model = tf.keras.models.load_model('data\\td_q\\model.hdf5')
             except:
                 # モデルの読み込みに失敗した場合はモデルを生成
-                self.__model = tf.keras.models.Sequential([tf.keras.layers.Dense(16, input_shape=(7, ), activation='relu'),
+                self.__model = tf.keras.models.Sequential([tf.keras.layers.Dense(16, input_shape=(3, ), activation='relu'),
                                                            tf.keras.layers.Dense(128, activation='relu'),
                                                            tf.keras.layers.Dense(16, activation='relu'),
                                                            tf.keras.layers.Dense(1)])
@@ -131,17 +131,18 @@ class AgentTDQ(AgentBase):
         """
         q = self.__get_q(status, action, None)
 
+        # 次の状態での最大の行動価値Qを取得
+        q_max_next = 0
+        for i in range(4):
+            q_next = self.__get_q(status_next, i, None)
+            if q_max_next < q_next:
+                q_max_next = q_next
+
+        q = q + self.__eta * ((reward + self.__decay * q_max_next) - q)
+
         if self.__mode_table:
             # テーブルモードの場合
-            # 次の状態での最大の行動価値Qを取得
-            q_max_next = 0
-            for i in range(4):
-                q_next = self.__get_q(status_next, i, None)
-                if q_max_next < q_next:
-                    q_max_next = q_next
-
             # 行動価値Qを更新
-            q = q + self.__eta * ((reward + self.__decay * q_max_next) - q)
             self.__q_data[status[1], status[0], action] = q
 
         return q
