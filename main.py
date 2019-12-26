@@ -11,9 +11,9 @@ from agent_dynamic_programing import AgentDynamicPrograming
 from agent_td import AgentTD
 
 # モードを指定
-mode = 'td_sarsa'
+mode = 'dynamic_programing'
 # テーブルモード
-mode_table = True
+mode_table = False
 
 # プレイ回数
 count_play = 1
@@ -72,7 +72,7 @@ elif mode == 'dynamic_programing':
         # 最大ループ数を1に変更(実際にプレイする必要がないため1回の学習(エポック数は1ではない)でよい)
         count_loop_max = 1000
         # エポック数を変更
-        epochs = 10000
+        epochs = 30000
 elif mode == 'td_q':
     # TD-Q法モードの場合
     # プレイ回数を1に変更

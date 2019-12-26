@@ -24,6 +24,7 @@ class AgentDynamicPrograming(AgentBase):
         self.__mode_table = mode_table
         self.__size = np.array(size)
         self.__count_random_policy = 0
+        self.__v_data = np.zeros([self.__size[0], self.__size[1]])
 
         if self.__mode_table:
             # テーブルモードの場合
@@ -31,8 +32,8 @@ class AgentDynamicPrograming(AgentBase):
                 # テーブルの情報をファイルから読み込み
                 self.__v_data = np.load('data\\dynamic_programing\\v_data.npy')
             except:
-                # ファイルからの読み込みに失敗した場合はすべて0で領域を確保
-                self.__v_data = np.zeros([self.__size[0], self.__size[1]])
+                # ファイルからの読み込みに失敗した場合
+                pass
         else:
             # ニューラルネットワークモードの場合
             try:
@@ -40,9 +41,9 @@ class AgentDynamicPrograming(AgentBase):
                 self.__model = tf.keras.models.load_model('data\\dynamic_programing\\model.hdf5')
             except:
                 # モデルの読み込みに失敗した場合はモデルを生成
-                self.__model = tf.keras.models.Sequential([tf.keras.layers.Dense(64, input_shape=(2, ), activation='relu'),
-                                                           tf.keras.layers.Dense(1024, activation='relu'),
-                                                           tf.keras.layers.Dense(64, activation='relu'),
+                self.__model = tf.keras.models.Sequential([tf.keras.layers.Dense(32, input_shape=(2, ), activation='relu'),
+                                                           #tf.keras.layers.Dense(1024, activation='relu'),
+                                                           tf.keras.layers.Dense(32, activation='relu'),
                                                            tf.keras.layers.Dense(1)])
                 self.__model.compile(optimizer='adam', loss='mse')
                 # 生成したモデルを保存
@@ -102,12 +103,16 @@ class AgentDynamicPrograming(AgentBase):
             indices = np.random.choice(range(self.__size[0] * self.__size[1]),
                                        self.__size[0] * self.__size[1],
                                        replace=False)
+            # スカラー値を座標に変換
+            statuses = (np.array([indices // self.__size[0], indices % self.__size[0]], dtype=np.int)).T
+
+            if not self.__mode_table:
+                # ニューラルネットワークモードの場合
+                self.__update_v_table()
 
             # 1つ以上の勾配の傾きが最小勾配より大きいかどうかのフラグ
             greater_gradient = False
-            for index in indices:
-                # スカラー値を座標に変換
-                status = np.array([index // self.__size[0], index % self.__size[0]])
+            for status in statuses:
                 # 有効な行動リストを取得
                 actions = self.__environment.get_actions_effective(status)
 
@@ -176,9 +181,12 @@ class AgentDynamicPrograming(AgentBase):
             if greater_gradient:
                 # 1つ以上の勾配の傾きが最小勾配より大きい場合
                 # 学習を実施
-                self.__model.fit(np.array(train_data), np.array(train_label), epochs=epochs, verbose=0)
+                history = self.__model.fit(np.array(train_data), np.array(train_label), epochs=epochs, verbose=0)
+                print('loss:', history.history['loss'][-1])
                 # 学習した重みをファイルに保存
                 self.__model.save_weights('data\\dynamic_programing\\weights.hdf5')
+                # 価値Vテーブルを更新
+                self.__update_v_table()
 
     def get_v_table(self):
         """
@@ -199,6 +207,18 @@ class AgentDynamicPrograming(AgentBase):
 
         return v_data
 
+    def __update_v_table(self):
+        """
+        価値Vテーブルを更新
+        :return: なし
+        """
+        if not self.__mode_table:
+            # ニューラルネットワークモードの場合
+            statuses = np.array([(i, j) for i in range(8) for j in range(8)])
+
+            v = self.__model.predict(np.array(statuses))
+            self.__v_data = v.reshape([self.__v_data.shape[0], self.__v_data.shape[1]])
+
     def __get_v(self, status_next):
         """
         価値V取得処理
@@ -206,12 +226,4 @@ class AgentDynamicPrograming(AgentBase):
         :param status_next: 次の状態
         :return: 価値V
         """
-        v = 0
-        if self.__mode_table:
-            # テーブルモードの場合
-            v = self.__v_data[status_next[1], status_next[0]]
-        else:
-            # ニューラルネットワークモードの場合
-            v = self.__model.predict(np.array([status_next[1], status_next[0]])[np.newaxis, :])[0][0]
-
-        return v
+        return self.__v_data[status_next[1], status_next[0]]
